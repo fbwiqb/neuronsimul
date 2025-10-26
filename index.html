@@ -1,378 +1,998 @@
-import React, { useState } from 'react';
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, ReferenceDot, Label, ReferenceLine
-} from 'recharts';
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>신경세포 막전위 시뮬레이터</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-const createMembraneData = (delay) => {
-  const data = [];
-  for (let t = 0; t <= 8; t += 0.1) {
-    let v = -70;
-    const localT = t - delay;
-    if (localT >= 0 && localT < 1.0) {
-      v = -70 + (localT / 1.0) * 20; // -70 → -50
-    } else if (localT >= 1.0 && localT < 1.5) {
-      v = -50 + ((localT - 1.0) / 0.5) * 50; // -50 → 0
-    } else if (localT >= 1.5 && localT < 2.0) {
-      v = 0 + ((localT - 1.5) / 0.5) * 30; // 0 → +30
-    } else if (localT >= 2.0 && localT < 2.5) {
-      v = 30 - ((localT - 2.0) / 0.5) * 30; // +30 → 0
-    } else if (localT >= 2.5 && localT < 3.0) {
-      v = 0 - ((localT - 2.5) / 0.5) * 80; // 0 → -80
-    } else if (localT >= 3.0 && localT <= 4.0) {
-      v = -80 + ((localT - 3.0) / 1.0) * 10; // -80 → -70
-    }
-    data.push({ time: parseFloat(t.toFixed(1)), voltage: parseFloat(v.toFixed(1)) });
-  }
-  return data;
-};
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
+            background: linear-gradient(135deg, #f8f9ff 0%, #eef0f8 100%);
+            min-height: 100vh;
+            padding: 10px;
+            padding-bottom: 60px;
+        }
 
-const Graph = ({ label, delay, currentTime, visible, time, speed, distances }) => {
-  if (!visible) return null;
-  const data = createMembraneData(delay);
-  const current = data.find((d, i, arr) => currentTime <= d.time || i === arr.length - 1) || { time: currentTime, voltage: -70 };
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 10px;
+            width: 100%;
+        }
 
-  const getBorderColor = (voltage) => {
-    if (voltage > 0) return '#dc3545';
-    if (voltage > -50) return '#fd7e14';
-    if (voltage > -75) return '#6c757d';
-    return '#0066cc';
-  };
-
-  return (
-    <div style={{
-      width: '48%',
-      height: 380,
-      margin: '1%',
-      border: '3px solid',
-      borderColor: getBorderColor(current.voltage),
-      backgroundColor: '#fff',
-      borderRadius: 12,
-      padding: 15,
-      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-      transition: 'all 0.3s ease'
-    }}>
-      <h4 style={{ 
-        margin: '0 0 10px 0', 
-        textAlign: 'center',
-        fontSize: '18px',
-        color: '#2c3e50',
-        borderBottom: `2px solid ${getBorderColor(current.voltage)}`,
-        paddingBottom: '8px'
-      }}>
-        📍 {label}
-      </h4>
-      <div style={{ 
-        textAlign: 'center', 
-        fontSize: '14px', 
-        marginBottom: 8,
-        backgroundColor: '#f8f9fa',
-        padding: '8px',
-        borderRadius: '6px'
-      }}>
-        현재 막전위: <strong style={{ 
-          fontSize: '16px',
-          color: getBorderColor(current.voltage)
-        }}>{current.voltage} mV</strong><br/>
-        자극 후 경과 시간: <strong style={{ color: '#495057' }}>
-          {currentTime >= delay ? `${(currentTime - delay).toFixed(1)} ms` : '도달 전'}
-        </strong>
-      </div>
-      <ResponsiveContainer width="100%" height="70%">
-        <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 25 }}>
-          <defs>
-            <linearGradient id={`gradient-${label}`} x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#0066cc" />
-              <stop offset="25%" stopColor="#6c757d" />
-              <stop offset="50%" stopColor="#fd7e14" />
-              <stop offset="75%" stopColor="#dc3545" />
-              <stop offset="100%" stopColor="#0066cc" />
-            </linearGradient>
-            <filter id={`glow-${label}`}>
-              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-              <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e9ecef" strokeOpacity={0.5} />
-          <XAxis 
-            dataKey="time" 
-            ticks={[0, 1, 2, 3, 4, 5, 6, 7, 8]}
-            stroke="#6c757d"
-            style={{ fontSize: '12px' }}
-          >
-            <Label value="시간(ms)" position="insideBottomRight" offset={-5} style={{ fill: '#495057' }} />
-          </XAxis>
-          <YAxis 
-            domain={[-100, 50]} 
-            ticks={[-80, -70, 0, 30]}
-            stroke="#6c757d"
-            style={{ fontSize: '12px' }}
-          >
-            <Label value="막전위(mV)" angle={-90} position="insideLeft" style={{ fill: '#495057' }} />
-          </YAxis>
-          <Tooltip 
-            formatter={(value) => [`${value} mV`, '막전위']}
-            contentStyle={{ 
-              backgroundColor: 'rgba(255,255,255,0.95)', 
-              border: '2px solid',
-              borderColor: getBorderColor(current.voltage),
-              borderRadius: '6px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-            }}
-            labelStyle={{ fontWeight: 'bold' }}
-          />
-          <Line 
-            type="monotone" 
-            dataKey="voltage" 
-            stroke="#2563eb"
-            strokeWidth={3}
-            dot={false}
-          />
-          <ReferenceDot 
-            x={currentTime} 
-            y={current.voltage} 
-            r={8}
-            fill={getBorderColor(current.voltage)}
-            stroke="#fff"
-            strokeWidth={3}
-          >
-            <animate attributeName="r" values="6;10;6" dur="1.5s" repeatCount="indefinite" />
-          </ReferenceDot>
-          <ReferenceLine y={-70} stroke="#6c757d" strokeDasharray="5 5" strokeOpacity={0.5}>
-            <Label value="휴지전위" position="right" style={{ fill: '#6c757d', fontSize: '11px' }} />
-          </ReferenceLine>
-          <ReferenceLine y={-80} stroke="#0066cc" strokeDasharray="5 5" strokeOpacity={0.5}>
-            <Label value="과분극" position="right" style={{ fill: '#0066cc', fontSize: '11px' }} />
-          </ReferenceLine>
-          <ReferenceLine y={30} stroke="#dc3545" strokeDasharray="5 5" strokeOpacity={0.5}>
-            <Label value="피크" position="right" style={{ fill: '#dc3545', fontSize: '11px' }} />
-          </ReferenceLine>
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
-  );
-};
-
-function App() {
-  const [speed, setSpeed] = useState(2);
-  const [time, setTime] = useState(0);
-  const [visibleGraphs, setVisibleGraphs] = useState([true, true, true, true]);
-
-  const distances = [0, 2, 4, 6];
-  const dPercents = [20, 40, 60, 80];
-
-  // 연속적인 위치 계산
-  const totalLength = 6; // cm
-  const xStart = 20;
-  const xEnd = 90;
-  const xRange = xEnd - xStart;
-  const excitable = Math.min(time * speed, totalLength);
-  const sparkStartPercent = 20;
-  const sparkEndPercent = 80;
-  const sparkRange = sparkEndPercent - sparkStartPercent;
-  const sparkX = sparkStartPercent + (excitable / totalLength) * sparkRange;
-
-  return (
-    <div style={{ padding: 20, maxWidth: '1400px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}>
-      <h2 style={{ textAlign: 'center', fontSize: '28px', marginBottom: '30px' }}>
-        🧠 신경세포 막전위 시뮬레이터
-      </h2>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px' }}>
-        <div style={{ flex: 1 }}>
-          <label style={{ fontSize: '16px', fontWeight: '600' }}>⚡ 전도 속도 (cm/ms): </label>
-          <input
-            type="number"
-            step="0.1"
-            value={speed}
-            onChange={e => setSpeed(parseFloat(e.target.value))}
-            style={{ marginLeft: 10, padding: '6px 10px', borderRadius: 4, border: '2px solid #dee2e6', fontSize: '15px', fontWeight: '500' }}
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: '15px' }}>
-          <span style={{ fontSize: '16px', fontWeight: '600', marginRight: '10px' }}>📊 그래프 표시:</span>
-          {distances.map((d, i) => (
-            <label key={i} style={{ cursor: 'pointer', fontSize: '15px' }}>
-              <input
-                type="checkbox"
-                checked={visibleGraphs[i]}
-                onChange={() => {
-                  const newVis = [...visibleGraphs];
-                  newVis[i] = !newVis[i];
-                  setVisibleGraphs(newVis);
-                }}
-                style={{ marginRight: 5, width: '16px', height: '16px' }}
-              /> 
-              <span style={{ fontWeight: visibleGraphs[i] ? '600' : '400' }}>{d}cm</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: '20px', marginBottom: 20 }}>
-        {/* 왼쪽: 시간 슬라이더 */}
-        <div style={{ flex: 1, backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px' }}>
-          <label style={{ fontSize: '16px', fontWeight: '600' }}>⏱️ 시간 (ms): 
-            <span style={{ marginLeft: '10px', fontSize: '18px', color: '#007bff' }}>{time.toFixed(1)}</span>
-          </label>
-          <input
-            type="range"
-            min="0"
-            max="8"
-            step="0.1"
-            value={time}
-            onChange={e => setTime(parseFloat(e.target.value))}
-            style={{ width: '100%', marginTop: 10, height: '8px' }}
-          />
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px', fontSize: '12px', color: '#6c757d' }}>
-            <span>0 ms</span>
-            <span>2 ms</span>
-            <span>4 ms</span>
-            <span>6 ms</span>
-            <span>8 ms</span>
-          </div>
-        </div>
-
-        {/* 오른쪽: 막전위 표 */}
-        <div style={{ border: '2px solid #dee2e6', backgroundColor: '#fff', padding: 15, borderRadius: 8, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-          <h4 style={{ marginTop: 0, textAlign: 'center', fontSize: '16px', marginBottom: '10px' }}>
-            📈 각 지점의 막전위 (mV)
-          </h4>
-          <table style={{ borderCollapse: 'collapse', textAlign: 'center' }}>
-            <thead>
-              <tr>
-                <th style={{ border: '2px solid #dee2e6', padding: '8px 12px', backgroundColor: '#e9ecef', fontWeight: '600', fontSize: '14px' }}>시간</th>
-                {['d₁', 'd₂', 'd₃', 'd₄'].map((d, i) => (
-                  <th key={i} style={{ border: '2px solid #dee2e6', padding: '8px 12px', backgroundColor: '#e9ecef', fontWeight: '600', fontSize: '14px' }}>
-                    {d} <span style={{ fontSize: '11px', fontWeight: '400' }}>({distances[i]}cm)</span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style={{ border: '2px solid #dee2e6', padding: '8px 12px', fontWeight: 'bold', backgroundColor: '#f8f9fa', fontSize: '14px' }}>{time.toFixed(1)}</td>
-                {distances.map((d, i) => {
-                  const delay = d / speed;
-                  const localT = time - delay;
-                  let v = -70;
-                  if (localT >= 0 && localT < 1.0) {
-                    v = -70 + (localT / 1.0) * 20;
-                  } else if (localT >= 1.0 && localT < 1.5) {
-                    v = -50 + ((localT - 1.0) / 0.5) * 50;
-                  } else if (localT >= 1.5 && localT < 2.0) {
-                    v = 0 + ((localT - 1.5) / 0.5) * 30;
-                  } else if (localT >= 2.0 && localT < 2.5) {
-                    v = 30 - ((localT - 2.0) / 0.5) * 30;
-                  } else if (localT >= 2.5 && localT < 3.0) {
-                    v = 0 - ((localT - 2.5) / 0.5) * 80;
-                  } else if (localT >= 3.0 && localT <= 4.0) {
-                    v = -80 + ((localT - 3.0) / 1.0) * 10;
-                  }
-                  const color = v > -50 ? '#dc3545' : v < -70 ? '#0066cc' : '#212529';
-                  const bgColor = v > 0 ? '#ffe4e6' : v < -70 ? '#e6f2ff' : '#fff';
-                  return (
-                    <td key={i} style={{ 
-                      border: '2px solid #dee2e6', 
-                      padding: '8px 12px', 
-                      color, 
-                      fontWeight: v > -50 ? 'bold' : '500',
-                      backgroundColor: bgColor,
-                      fontSize: '15px'
-                    }}>
-                      {v.toFixed(1)}
-                    </td>
-                  );
-                })}
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div style={{ position: 'relative', width: '100%', height: 150, marginBottom: 20 }}>
-        <svg width="100%" height="100%" viewBox="0 0 1000 150">
-          {/* 수상돌기 - 방사형으로 */}
-          <g id="dendrites" opacity="0.7">
-            {/* 위쪽 */}
-            <path d="M 100 45 L 100 25 M 100 25 L 95 15 M 100 25 L 105 15" stroke="#CD853F" strokeWidth="1.5" fill="none" />
-            <path d="M 85 50 L 75 30 M 75 30 L 70 20 M 75 30 L 65 25" stroke="#CD853F" strokeWidth="1.5" fill="none" />
-            <path d="M 115 50 L 125 30 M 125 30 L 130 20 M 125 30 L 135 25" stroke="#CD853F" strokeWidth="1.5" fill="none" />
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
             
-            {/* 왼쪽 */}
-            <path d="M 70 75 L 50 75 M 50 75 L 40 70 M 50 75 L 40 80" stroke="#CD853F" strokeWidth="1.5" fill="none" />
-            <path d="M 75 60 L 55 45 M 55 45 L 45 40 M 55 45 L 50 35" stroke="#CD853F" strokeWidth="1.5" fill="none" />
-            <path d="M 75 90 L 55 105 M 55 105 L 45 110 M 55 105 L 50 115" stroke="#CD853F" strokeWidth="1.5" fill="none" />
+            h1 {
+                font-size: 22px;
+                margin-bottom: 20px;
+            }
             
-            {/* 아래쪽 */}
-            <path d="M 100 105 L 100 125 M 100 125 L 95 135 M 100 125 L 105 135" stroke="#CD853F" strokeWidth="1.5" fill="none" />
-            <path d="M 85 100 L 75 120 M 75 120 L 70 130 M 75 120 L 65 125" stroke="#CD853F" strokeWidth="1.5" fill="none" />
-            <path d="M 115 100 L 125 120 M 125 120 L 130 130 M 125 120 L 135 125" stroke="#CD853F" strokeWidth="1.5" fill="none" />
-          </g>
+            .control-row {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            input[type="range"] {
+                width: 100%;
+            }
+        }
 
-          {/* 세포체 */}
-          <circle cx="100" cy="75" r="30" fill="#FFE4B5" stroke="#8B4513" strokeWidth="2" />
-          <circle cx="100" cy="75" r="10" fill="#CD853F" />
-          
-          {/* 축삭 (Axon) - 더 길고 굵게 */}
-          <rect x="130" y="65" width="750" height="20" fill="#FFE4B5" stroke="#8B4513" strokeWidth="1" />
-          
-          {/* 축삭 말단 - 간단하게 */}
-          <g id="axon-terminal">
-            <path d="M 880 75 L 920 60" stroke="#8B4513" strokeWidth="2" fill="none" />
-            <path d="M 880 75 L 920 75" stroke="#8B4513" strokeWidth="2" fill="none" />
-            <path d="M 880 75 L 920 90" stroke="#8B4513" strokeWidth="2" fill="none" />
-            <circle cx="920" cy="60" r="5" fill="#FFE4B5" stroke="#8B4513" strokeWidth="1" />
-            <circle cx="920" cy="75" r="5" fill="#FFE4B5" stroke="#8B4513" strokeWidth="1" />
-            <circle cx="920" cy="90" r="5" fill="#FFE4B5" stroke="#8B4513" strokeWidth="1" />
-          </g>
+        h1 {
+            text-align: center;
+            font-size: 22px;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
 
-          {/* 측정 지점 표시 - 더 크고 명확하게 */}
-          <text x="100" y="140" textAnchor="middle" fontSize="14" fontWeight="bold">세포체</text>
+        .control-panel {
+            background: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
 
-          {/* d1~d4 지점 표시 */}
-          {[0, 1, 2, 3].map((i) => {
-            const xPos = 250 + (i * 180);
-            return (
-              <g key={i}>
-                <line x1={xPos} y1="30" x2={xPos} y2="120" stroke="black" strokeWidth="2" strokeDasharray="5 3" />
-                <text x={xPos} y="140" textAnchor="middle" fontSize="14" fontWeight="bold">{distances[i]}cm</text>
-                <text x={xPos} y="20" textAnchor="middle" fontSize="16" fontWeight="bold">d<tspan dy="4" fontSize="12">{i + 1}</tspan></text>
-              </g>
-            );
-          })}
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
 
-          {/* 활동전위 신호 (번개) - d1(0cm)에서 시작 */}
-          {time * speed <= totalLength && (
-            <g transform={`translate(${250 + (excitable / totalLength) * 540}, 75)`}>
-              <circle r="20" fill="yellow" opacity="0.4" />
-              <text fontSize="24" fill="gold" dominantBaseline="middle" textAnchor="middle">⚡</text>
-            </g>
-          )}
-        </svg>
-      </div>
+        .control-row:last-child {
+            margin-bottom: 0;
+        }
 
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
+        label {
+            font-weight: 600;
+            font-size: 16px;
+        }
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
-        {distances.map((d, i) => (
-          <Graph
-            key={i}
-            label={`${d}cm 지점`}
-            delay={d / speed}
-            currentTime={time}
-            visible={visibleGraphs[i]}
-            time={time}
-            speed={speed}
-            distances={distances}
-          />
-        ))}
-      </div>
+        input[type="number"] {
+            padding: 8px 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 15px;
+            width: 80px;
+        }
+
+        input[type="range"] {
+            width: 400px;
+            height: 8px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #dee2e6;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #3d4e9f;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #3d4e9f;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .time-display {
+            font-size: 18px;
+            font-weight: bold;
+            color: #3d4e9f;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        button {
+            padding: 10px 25px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-help {
+            background: #3d4e9f;
+            color: white;
+        }
+
+        .btn-reset {
+            background: #dc3545;
+            color: white;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        /* 모달 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #3d4e9f 0%, #667eea 100%);
+            color: white;
+            padding: 20px;
+            margin: -30px -30px 20px -30px;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            color: white;
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .modal-close {
+            background: none;
+            color: white;
+            border: none;
+            font-size: 30px;
+            cursor: pointer;
+            padding: 0;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 10px;
+            color: #333;
+            line-height: 1.8;
+        }
+
+        .help-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #3d4e9f;
+        }
+
+        .help-section h3 {
+            color: #3d4e9f;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .help-section p, .help-section ul {
+            margin: 10px 0;
+        }
+
+        .help-section ul {
+            padding-left: 25px;
+        }
+
+        .help-section li {
+            margin: 8px 0;
+        }
+
+        .help-section strong {
+            color: #3d4e9f;
+        }
+
+        /* 표 스타일 */
+        .voltage-table-container {
+            border: 2px solid #dee2e6;
+            background-color: white;
+            padding: 8px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 8px;
+        }
+
+        .voltage-table-container h4 {
+            margin-top: 0;
+            text-align: center;
+            font-size: 13px;
+            margin-bottom: 6px;
+            color: #2c3e50;
+        }
+
+        .voltage-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .voltage-table th,
+        .voltage-table td {
+            border: 2px solid #dee2e6;
+            padding: 5px 8px;
+            text-align: center;
+        }
+
+        .voltage-table th {
+            background-color: #e9ecef;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .voltage-table th span {
+            font-size: 9px;
+            font-weight: 400;
+            color: #6c757d;
+        }
+
+        .voltage-table td {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .voltage-table td.time-cell {
+            font-weight: bold;
+            background-color: #f8f9fa;
+            font-size: 12px;
+        }
+
+        .voltage-table td.voltage-cell {
+            background-color: white;
+            color: #212529;
+        }
+
+        .neuron-container {
+            background: #e7f3ff;
+            border: 2px solid #0066cc;
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 8px;
+        }
+
+        #neuronSvg {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .graphs-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 12px;
+            margin-bottom: 15px;
+            padding: 0 10px;
+            width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            .graphs-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 767px) {
+            .graphs-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .graph-box {
+            background: white;
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .graph-box canvas {
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        .graph-box h3 {
+            text-align: center;
+            margin-bottom: 4px;
+            font-size: 12px;
+            padding-bottom: 4px;
+        }
+
+        .graph-info {
+            text-align: center;
+            background: #f8f9fa;
+            padding: 4px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            font-size: 10px;
+        }
+
+        .graph-info strong {
+            font-size: 11px;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #3d4e9f;
+            color: white;
+            text-align: center;
+            padding: 10px 20px;
+            font-size: 14px;
+            z-index: 999;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .checkbox-group label {
+            cursor: pointer;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 신경세포 막전위 시뮬레이터</h1>
+
+        <div class="control-panel">
+            <div class="control-row">
+                <div class="control-group">
+                    <label>⚡ 전도 속도 (cm/ms):</label>
+                    <input type="number" id="speedInput" value="2" step="0.1" min="0.1">
+                </div>
+
+                <div class="control-group">
+                    <button class="btn-help" id="helpBtn">📖 사용법</button>
+                    <button class="btn-help" id="devLogBtn">📝 개발자 로그</button>
+                </div>
+            </div>
+
+            <div class="control-row">
+                <div class="control-group" style="flex: 1;">
+                    <label>⏱️ 시간 조절:</label>
+                    <input type="range" id="timeSlider" min="0" max="8" step="0.1" value="0">
+                    <span class="time-display" id="timeDisplay">0.0 ms</span>
+                </div>
+            </div>
+
+            <div class="control-row">
+                <div class="checkbox-group">
+                    <span style="font-weight: 600;">📊 그래프 표시:</span>
+                    <label><input type="checkbox" class="graph-toggle" data-index="0" checked> 0cm</label>
+                    <label><input type="checkbox" class="graph-toggle" data-index="1" checked> 2cm</label>
+                    <label><input type="checkbox" class="graph-toggle" data-index="2" checked> 4cm</label>
+                    <label><input type="checkbox" class="graph-toggle" data-index="3" checked> 6cm</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="neuron-container">
+            <svg id="neuronSvg" width="950" height="150">
+                <!-- Dendrites -->
+                <g id="dendrites">
+                    <path d="M 100 45 L 100 25 M 100 25 L 95 15 M 100 25 L 105 15" stroke="#CD853F" stroke-width="1.5" fill="none" />
+                    <path d="M 85 50 L 75 30 M 75 30 L 70 20 M 75 30 L 65 25" stroke="#CD853F" stroke-width="1.5" fill="none" />
+                    <path d="M 115 50 L 125 30 M 125 30 L 130 20 M 125 30 L 135 25" stroke="#CD853F" stroke-width="1.5" fill="none" />
+                    <path d="M 70 75 L 50 75 M 50 75 L 40 70 M 50 75 L 40 80" stroke="#CD853F" stroke-width="1.5" fill="none" />
+                    <path d="M 75 60 L 55 45 M 55 45 L 45 40 M 55 45 L 50 35" stroke="#CD853F" stroke-width="1.5" fill="none" />
+                    <path d="M 75 90 L 55 105 M 55 105 L 45 110 M 55 105 L 50 115" stroke="#CD853F" stroke-width="1.5" fill="none" />
+                    <path d="M 100 105 L 100 125 M 100 125 L 95 135 M 100 125 L 105 135" stroke="#CD853F" stroke-width="1.5" fill="none" />
+                    <path d="M 85 100 L 75 120 M 75 120 L 70 130 M 75 120 L 65 125" stroke="#CD853F" stroke-width="1.5" fill="none" />
+                    <path d="M 115 100 L 125 120 M 125 120 L 130 130 M 125 120 L 135 125" stroke="#CD853F" stroke-width="1.5" fill="none" />
+                </g>
+
+                <!-- Cell body -->
+                <circle cx="100" cy="75" r="30" fill="#FFE4B5" stroke="#8B4513" stroke-width="2" />
+                <circle cx="100" cy="75" r="10" fill="#CD853F" />
+                
+                <!-- Axon -->
+                <rect x="130" y="69" width="750" height="12" fill="#FFE4B5" stroke="#8B4513" stroke-width="1" />
+                
+                <!-- Axon terminal -->
+                <g id="axon-terminal">
+                    <path d="M 880 75 L 920 60" stroke="#8B4513" stroke-width="2" fill="none" />
+                    <path d="M 880 75 L 920 75" stroke="#8B4513" stroke-width="2" fill="none" />
+                    <path d="M 880 75 L 920 90" stroke="#8B4513" stroke-width="2" fill="none" />
+                    <circle cx="920" cy="60" r="5" fill="#FFE4B5" stroke="#8B4513" stroke-width="1" />
+                    <circle cx="920" cy="75" r="5" fill="#FFE4B5" stroke="#8B4513" stroke-width="1" />
+                    <circle cx="920" cy="90" r="5" fill="#FFE4B5" stroke="#8B4513" stroke-width="1" />
+                </g>
+
+                <!-- Labels -->
+                <text x="100" y="140" text-anchor="middle" font-size="14" font-weight="bold">세포체</text>
+
+                <!-- Distance markers -->
+                <g id="d1-marker">
+                    <line x1="250" y1="30" x2="250" y2="120" stroke="black" stroke-width="2" stroke-dasharray="5 3" />
+                    <text x="250" y="140" text-anchor="middle" font-size="14" font-weight="bold">0cm</text>
+                    <text x="250" y="20" text-anchor="middle" font-size="16" font-weight="bold">d₁</text>
+                </g>
+                <g id="d2-marker">
+                    <line x1="430" y1="30" x2="430" y2="120" stroke="black" stroke-width="2" stroke-dasharray="5 3" />
+                    <text x="430" y="140" text-anchor="middle" font-size="14" font-weight="bold">2cm</text>
+                    <text x="430" y="20" text-anchor="middle" font-size="16" font-weight="bold">d₂</text>
+                </g>
+                <g id="d3-marker">
+                    <line x1="610" y1="30" x2="610" y2="120" stroke="black" stroke-width="2" stroke-dasharray="5 3" />
+                    <text x="610" y="140" text-anchor="middle" font-size="14" font-weight="bold">4cm</text>
+                    <text x="610" y="20" text-anchor="middle" font-size="16" font-weight="bold">d₃</text>
+                </g>
+                <g id="d4-marker">
+                    <line x1="790" y1="30" x2="790" y2="120" stroke="black" stroke-width="2" stroke-dasharray="5 3" />
+                    <text x="790" y="140" text-anchor="middle" font-size="14" font-weight="bold">6cm</text>
+                    <text x="790" y="20" text-anchor="middle" font-size="16" font-weight="bold">d₄</text>
+                </g>
+
+                <!-- Signal spark -->
+                <g id="spark" transform="translate(250, 75)" style="display: none;">
+                    <circle r="20" fill="yellow" opacity="0.4" />
+                    <text font-size="24" fill="gold" dominant-baseline="middle" text-anchor="middle">⚡</text>
+                </g>
+            </svg>
+        </div>
+
+        <!-- 막전위 표 -->
+        <div class="voltage-table-container">
+            <h4>📈 각 지점의 막전위 (mV)</h4>
+            <table class="voltage-table">
+                <thead>
+                    <tr>
+                        <th>시간</th>
+                        <th>d₁ <span>(0cm)</span></th>
+                        <th>d₂ <span>(2cm)</span></th>
+                        <th>d₃ <span>(4cm)</span></th>
+                        <th>d₄ <span>(6cm)</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="time-cell" id="tableTime">0.0 ms</td>
+                        <td class="voltage-cell" id="tableVoltage0">-70.0</td>
+                        <td class="voltage-cell" id="tableVoltage1">-70.0</td>
+                        <td class="voltage-cell" id="tableVoltage2">-70.0</td>
+                        <td class="voltage-cell" id="tableVoltage3">-70.0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="graphs-container">
+            <div class="graph-box" id="graph0">
+                <h3 style="border-bottom: 3px solid #0066cc;">📍 0cm 지점</h3>
+                <div class="graph-info">
+                    현재 막전위: <strong id="voltage0">-70 mV</strong><br>
+                    자극 후 경과 시간: <strong id="time0">도달 전</strong>
+                </div>
+                <canvas id="chart0"></canvas>
+            </div>
+
+            <div class="graph-box" id="graph1">
+                <h3 style="border-bottom: 3px solid #fd7e14;">📍 2cm 지점</h3>
+                <div class="graph-info">
+                    현재 막전위: <strong id="voltage1">-70 mV</strong><br>
+                    자극 후 경과 시간: <strong id="time1">도달 전</strong>
+                </div>
+                <canvas id="chart1"></canvas>
+            </div>
+
+            <div class="graph-box" id="graph2">
+                <h3 style="border-bottom: 3px solid #28a745;">📍 4cm 지점</h3>
+                <div class="graph-info">
+                    현재 막전위: <strong id="voltage2">-70 mV</strong><br>
+                    자극 후 경과 시간: <strong id="time2">도달 전</strong>
+                </div>
+                <canvas id="chart2"></canvas>
+            </div>
+
+            <div class="graph-box" id="graph3">
+                <h3 style="border-bottom: 3px solid #dc3545;">📍 6cm 지점</h3>
+                <div class="graph-info">
+                    현재 막전위: <strong id="voltage3">-70 mV</strong><br>
+                    자극 후 경과 시간: <strong id="time3">도달 전</strong>
+                </div>
+                <canvas id="chart3"></canvas>
+            </div>
+        </div>
     </div>
-  );
-}
 
-export default App;
+    <div class="footer">
+        ⓒ 2025 충남삼성고등학교 신도경T<br>
+        <a href="mailto:pantarei01@cnsa.hs.kr">pantarei01@cnsa.hs.kr</a>
+    </div>
+
+    <!-- 사용법 모달 -->
+    <div class="modal" id="helpModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📖 신경세포 막전위 시뮬레이터 사용법</h2>
+                <button class="modal-close" onclick="closeHelp()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="help-section">
+                    <h3>🎯 프로그램 소개</h3>
+                    <p><strong>신경세포 막전위 시뮬레이터</strong>는 신경세포에서 활동전위가 축삭을 따라 전도되는 과정을 시각적으로 관찰할 수 있는 교육용 프로그램입니다. 신경세포의 세포체에서 시작된 신호가 축삭을 따라 이동하면서 각 지점의 막전위가 어떻게 변화하는지 실시간으로 확인할 수 있습니다.</p>
+                </div>
+
+                <div class="help-section">
+                    <h3>🎮 기본 사용법</h3>
+                    <p><strong>1. 전도 속도 설정</strong></p>
+                    <ul>
+                        <li><strong>⚡ 전도 속도 (cm/ms)</strong>: 활동전위가 축삭을 따라 전파되는 속도를 설정합니다</li>
+                        <li>기본값은 2 cm/ms이며, 0.1 단위로 조절할 수 있습니다</li>
+                        <li>속도가 빠를수록 신호가 더 빨리 전달됩니다</li>
+                        <li>속도를 변경하면 자동으로 모든 데이터가 업데이트됩니다</li>
+                    </ul>
+
+                    <p><strong>2. 시간 조절 슬라이더</strong></p>
+                    <ul>
+                        <li><strong>⏱️ 시간 조절</strong>: 슬라이더를 좌우로 움직여 시뮬레이션 시간을 조절합니다</li>
+                        <li>0 ms부터 8 ms까지 0.1 ms 단위로 조절 가능합니다</li>
+                        <li>슬라이더를 움직이면 실시간으로 각 지점의 막전위 변화를 관찰할 수 있습니다</li>
+                        <li>슬라이더를 0으로 돌리면 처음 상태로 돌아갑니다</li>
+                    </ul>
+
+                    <p><strong>3. 막전위 표 확인</strong></p>
+                    <ul>
+                        <li><strong>📈 각 지점의 막전위 표</strong>: 신경세포 그림 아래에 실시간 막전위 값을 표로 표시합니다</li>
+                        <li>현재 시간과 네 지점(d₁~d₄)의 막전위를 한눈에 확인할 수 있습니다</li>
+                        <li>막전위 값은 활동전위의 단계별로 색상이 변합니다:
+                            <ul>
+                                <li>회색: 휴지전위 (-70mV) 또는 신호 도달 전</li>
+                                <li>빨강: 탈분극 단계 (0~2ms, 막전위 상승 중)</li>
+                                <li>초록: 재분극 단계 (2~3ms, 막전위 하강 중)</li>
+                                <li>파랑: 과분극 단계 (3~4ms, -70mV 이하로 하강)</li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <p><strong>4. 그래프 표시 선택</strong></p>
+                    <ul>
+                        <li><strong>📊 그래프 표시</strong>: 체크박스를 통해 원하는 지점의 그래프만 선택적으로 볼 수 있습니다</li>
+                        <li>0cm, 2cm, 4cm, 6cm 네 지점의 그래프를 자유롭게 켜고 끌 수 있습니다</li>
+                        <li>그래프는 2x2 격자 형태로 배치되어 한눈에 비교하기 좋습니다</li>
+                    </ul>
+
+                    <p><strong>5. 제어 버튼</strong></p>
+                    <ul>
+                        <li><strong>📖 사용법</strong>: 이 도움말을 엽니다</li>
+                    </ul>
+                </div>
+
+                <div class="help-section">
+                    <h3>📊 그래프 이해하기</h3>
+                    <p>각 그래프는 특정 지점에서의 막전위 변화를 보여줍니다:</p>
+                    <ul>
+                        <li><strong>가로축</strong>: 시간 (ms, 밀리초)</li>
+                        <li><strong>세로축</strong>: 막전위 (mV, 밀리볼트)</li>
+                        <li><strong>활동전위의 단계별 색상 구분:</strong>
+                            <ul>
+                                <li><strong style="color: #6c757d;">회색</strong>: 휴지전위 (-70 mV) 또는 신호 도달 전</li>
+                                <li><strong style="color: #dc3545;">빨강</strong>: 탈분극 단계 (0~2ms, 막전위 상승)</li>
+                                <li><strong style="color: #28a745;">초록</strong>: 재분극 단계 (2~3ms, 막전위 하강)</li>
+                                <li><strong style="color: #0066cc;">파랑</strong>: 과분극 단계 (3~4ms, -70mV 이하)</li>
+                            </ul>
+                        </li>
+                        <li><strong>활동전위 피크</strong>: 약 +30 mV (최고점, 탈분극 단계 중)</li>
+                    </ul>
+                </div>
+
+                <div class="help-section">
+                    <h3>🧠 신경세포 구조</h3>
+                    <ul>
+                        <li><strong>세포체</strong>: 신경세포의 중심부로, 핵이 위치한 곳입니다</li>
+                        <li><strong>수상돌기</strong>: 다른 신경세포로부터 신호를 받는 가지 모양의 구조입니다</li>
+                        <li><strong>축삭</strong>: 전기 신호가 전달되는 긴 돌기입니다</li>
+                        <li><strong>축삭 말단</strong>: 다른 신경세포나 근육 세포로 신호를 전달하는 끝부분입니다</li>
+                        <li><strong>⚡ 번개 아이콘</strong>: 현재 활동전위가 위치한 지점을 나타냅니다</li>
+                    </ul>
+                </div>
+
+                <div class="help-section">
+                    <h3>💡 학습 팁</h3>
+                    <ul>
+                        <li><strong>전도 속도 변화 관찰</strong>: 전도 속도를 다르게 설정하고 신호 도달 시간 차이를 비교해보세요</li>
+                        <li><strong>지점별 비교</strong>: 여러 지점의 그래프를 동시에 보면서 신호가 순차적으로 전달되는 것을 확인하세요</li>
+                        <li><strong>막전위 변화 단계</strong>: 슬라이더를 천천히 움직이며 휴지전위 → 탈분극 → 재분극 → 과분극 단계를 관찰하세요</li>
+                        <li><strong>도달 시간 계산</strong>: 각 지점까지의 거리를 전도 속도로 나누면 신호 도달 시간을 예측할 수 있습니다</li>
+                    </ul>
+                </div>
+
+                <div class="help-section">
+                    <h3>🔬 과학적 배경</h3>
+                    <p><strong>활동전위란?</strong></p>
+                    <p>신경세포에서 전기 신호가 발생하는 현象입니다. 자극이 역치를 넘으면 Na⁺(나트륨) 통로가 열리며 막전위가 급격히 상승하고, 이어서 K⁺(칼륨) 통로가 열리며 막전위가 다시 하강합니다.</p>
+                    
+                    <p><strong>전도 과정:</strong></p>
+                    <p>활동전위는 축삭을 따라 한 방향으로 전파됩니다. 이는 앞선 부위의 활동전위가 인접 부위를 탈분극시키면서 연쇄적으로 일어나는 과정입니다. 유수 신경섬유에서는 도약전도가 일어나 더 빠른 전도가 가능합니다.</p>
+                </div>
+
+                <div class="help-section">
+                    <h3>❓ FAQ</h3>
+                    <p><strong>Q: 왜 일정 시간이 지나면 신호가 사라지나요?</strong></p>
+                    <p>A: 실제 신경세포에서도 활동전위는 약 1-2ms의 짧은 시간 동안만 지속됩니다. 이후 불응기를 거쳐 다시 휴지전위로 돌아갑니다.</p>
+                    
+                    <p><strong>Q: 그래프에서 '도달 전'은 무슨 의미인가요?</strong></p>
+                    <p>A: 활동전위가 아직 해당 지점에 도달하지 않았다는 뜻입니다. 전도 속도에 따라 각 지점마다 신호 도달 시간이 다릅니다.</p>
+                    
+                    <p><strong>Q: 과분극은 왜 일어나나요?</strong></p>
+                    <p>A: K⁺ 통로가 닫히는 속도가 느려서 일시적으로 휴지전위보다 낮아집니다. 이는 신경세포가 연속적인 자극에 대비하는 안전장치 역할을 합니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 개발자 로그 모달 -->
+    <div class="modal" id="devLogModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📝 개발자 로그</h2>
+                <button class="modal-close" onclick="closeDevLog()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="help-section">
+                    <div class="log-date" style="color: #3d4e9f; font-weight: bold; font-size: 1.1em; margin-bottom: 10px;">2025. 10. 26. (일)</div>
+                    <div class="log-text">
+                        <strong>신경세포 막전위 시뮬레이터 v1.0 출시</strong><br>
+                        신경세포에서 활동전위가 축삭을 따라 전도되는 과정을 시각적으로 이해할 수 있는 교육용 시뮬레이션 프로그램을 공개했습니다. 
+                        시간 슬라이더를 통해 각 지점의 막전위 변화를 실시간으로 관찰하고, 전도 속도에 따른 차이를 비교할 수 있습니다.
+                    </div>
+                </div>
+                
+                <div class="help-section">
+                    <div class="log-date" style="color: #3d4e9f; font-weight: bold; font-size: 1.1em; margin-bottom: 10px;">©️ 저작권 정보</div>
+                    <div class="log-text">
+                        <strong>신경세포 막전위 시뮬레이터 v1.0</strong><br><br>
+                        ⓒ 2025 충남삼성고등학교 신도경 교사<br>
+                        이메일: <a href="mailto:pantarei01@cnsa.hs.kr">pantarei01@cnsa.hs.kr</a><br><br>
+                        
+                        본 프로그램은 교육 목적으로 제작되었으며, 자유롭게 사용하실 수 있습니다.<br>
+                        상업적 이용 시에는 제작자에게 문의해 주시기 바랍니다.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 막전위 데이터 생성 함수
+        function createMembraneData(delay) {
+            const data = [];
+            for (let t = 0; t <= 8; t += 0.1) {
+                let v = -70;
+                const localT = t - delay;
+                if (localT >= 0 && localT < 1.0) {
+                    v = -70 + (localT / 1.0) * 20; // -70 → -50
+                } else if (localT >= 1.0 && localT < 1.5) {
+                    v = -50 + ((localT - 1.0) / 0.5) * 50; // -50 → 0
+                } else if (localT >= 1.5 && localT < 2.0) {
+                    v = 0 + ((localT - 1.5) / 0.5) * 30; // 0 → +30
+                } else if (localT >= 2.0 && localT < 2.5) {
+                    v = 30 - ((localT - 2.0) / 0.5) * 30; // +30 → 0
+                } else if (localT >= 2.5 && localT < 3.0) {
+                    v = 0 - ((localT - 2.5) / 0.5) * 80; // 0 → -80
+                } else if (localT >= 3.0 && localT <= 4.0) {
+                    v = -80 + ((localT - 3.0) / 1.0) * 10; // -80 → -70
+                }
+                data.push({ time: parseFloat(t.toFixed(1)), voltage: parseFloat(v.toFixed(1)) });
+            }
+            return data;
+        }
+
+        // 전역 변수
+        const distances = [0, 2, 4, 6];
+        const charts = [];
+        let currentTime = 0;
+        let speed = 2;
+
+        // 차트 초기화
+        distances.forEach((distance, index) => {
+            const ctx = document.getElementById(`chart${index}`).getContext('2d');
+            const data = createMembraneData(distance / speed);
+            
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => d.time),
+                    datasets: [{
+                        label: '막전위 (mV)',
+                        data: data.map(d => d.voltage),
+                        borderColor: '#0066cc',
+                        backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2.2,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { 
+                            enabled: true,
+                            titleFont: { size: 9 },
+                            bodyFont: { size: 9 }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: '시간 (ms)', font: { size: 9, weight: 'bold' } },
+                            ticks: { 
+                                font: { size: 7 },
+                                stepSize: 1,
+                                callback: function(value, index) {
+                                    const label = this.getLabelForValue(value);
+                                    return label % 1 === 0 ? label : '';
+                                }
+                            }
+                        },
+                        y: {
+                            title: { display: true, text: '막전위 (mV)', font: { size: 9, weight: 'bold' } },
+                            ticks: { font: { size: 7 } },
+                            min: -100,
+                            max: 50
+                        }
+                    }
+                }
+            });
+            
+            charts.push(chart);
+        });
+
+        // 창 크기 변경 시 차트 업데이트
+        let resizeTimeout;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(function() {
+                charts.forEach(chart => {
+                    chart.resize();
+                });
+            }, 100);
+        });
+
+        // 막전위 색상 결정 함수 (단계별)
+        function getVoltageColor(voltage, delay, currentTime) {
+            const localTime = currentTime - delay;
+            
+            // 신호가 도달하기 전
+            if (localTime < 0) {
+                return '#6c757d'; // 회색 (휴지전위)
+            }
+            
+            // 탈분극 (0~2초): 빨강
+            if (localTime >= 0 && localTime < 2.0) {
+                return '#dc3545'; // 빨강
+            }
+            
+            // 재분극 (2~3초): 초록
+            if (localTime >= 2.0 && localTime < 3.0) {
+                return '#28a745'; // 초록
+            }
+            
+            // 과분극 (3~4초): 파랑
+            if (localTime >= 3.0 && localTime < 4.0) {
+                return '#0066cc'; // 파랑
+            }
+            
+            // 다시 휴지전위로 복귀 (4초 이후): 회색
+            return '#6c757d'; // 회색
+        }
+
+        // 업데이트 함수
+        function updateSimulation() {
+            const totalLength = 6; // cm
+            const excitable = Math.min(currentTime * speed, totalLength);
+            
+            // 시간 표시 업데이트
+            document.getElementById('timeDisplay').textContent = `${currentTime.toFixed(1)} ms`;
+            document.getElementById('tableTime').textContent = `${currentTime.toFixed(1)} ms`;
+            
+            // 번개 위치 업데이트
+            const spark = document.getElementById('spark');
+            if (currentTime * speed <= totalLength) {
+                const xPos = 250 + (excitable / totalLength) * 540;
+                spark.setAttribute('transform', `translate(${xPos}, 75)`);
+                spark.style.display = 'block';
+            } else {
+                spark.style.display = 'none';
+            }
+
+            // 각 지점 업데이트
+            distances.forEach((distance, index) => {
+                const delay = distance / speed;
+                const data = createMembraneData(delay);
+                const current = data.find((d, i, arr) => currentTime <= d.time || i === arr.length - 1) || { time: currentTime, voltage: -70 };
+                
+                // 단계별 색상 결정
+                const voltageColor = getVoltageColor(current.voltage, delay, currentTime);
+                
+                // 전압 표시 업데이트
+                const voltageElem = document.getElementById(`voltage${index}`);
+                voltageElem.textContent = `${current.voltage} mV`;
+                voltageElem.style.color = voltageColor;
+                
+                // 표의 전압 업데이트
+                const tableVoltageElem = document.getElementById(`tableVoltage${index}`);
+                tableVoltageElem.textContent = current.voltage.toFixed(1);
+                tableVoltageElem.style.color = voltageColor;
+                tableVoltageElem.style.fontWeight = 'bold';
+                
+                // 시간 표시 업데이트
+                const timeElem = document.getElementById(`time${index}`);
+                if (currentTime >= delay) {
+                    timeElem.textContent = `${(currentTime - delay).toFixed(1)} ms`;
+                } else {
+                    timeElem.textContent = '도달 전';
+                }
+
+                // 차트 포인트 업데이트
+                const dataIndex = data.findIndex(d => d.time === current.time);
+                if (dataIndex >= 0) {
+                    charts[index].data.datasets[0].pointRadius = data.map((_, i) => i === dataIndex ? 8 : 0);
+                    charts[index].update('none');
+                }
+            });
+        }
+
+        // 초기화
+        function reset() {
+            currentTime = 0;
+            speed = parseFloat(document.getElementById('speedInput').value);
+            document.getElementById('timeSlider').value = 0;
+            
+            // 차트 데이터 업데이트
+            distances.forEach((distance, index) => {
+                const data = createMembraneData(distance / speed);
+                charts[index].data.labels = data.map(d => d.time);
+                charts[index].data.datasets[0].data = data.map(d => d.voltage);
+                charts[index].data.datasets[0].pointRadius = 0;
+                charts[index].update();
+            });
+            
+            updateSimulation();
+        }
+
+        // 모달 함수
+        function showHelp() {
+            document.getElementById('helpModal').style.display = 'block';
+        }
+
+        function closeHelp() {
+            document.getElementById('helpModal').style.display = 'none';
+        }
+
+        function showDevLog() {
+            document.getElementById('devLogModal').style.display = 'block';
+        }
+
+        function closeDevLog() {
+            document.getElementById('devLogModal').style.display = 'none';
+        }
+
+        // 모달 외부 클릭 시 닫기
+        window.onclick = function(event) {
+            const helpModal = document.getElementById('helpModal');
+            const devLogModal = document.getElementById('devLogModal');
+            if (event.target === helpModal) {
+                helpModal.style.display = 'none';
+            }
+            if (event.target === devLogModal) {
+                devLogModal.style.display = 'none';
+            }
+        }
+
+        // 이벤트 리스너
+        document.getElementById('helpBtn').addEventListener('click', showHelp);
+        document.getElementById('devLogBtn').addEventListener('click', showDevLog);
+        document.getElementById('speedInput').addEventListener('change', reset);
+        
+        // 시간 슬라이더
+        document.getElementById('timeSlider').addEventListener('input', (e) => {
+            currentTime = parseFloat(e.target.value);
+            updateSimulation();
+        });
+
+        // 그래프 토글
+        document.querySelectorAll('.graph-toggle').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                const graphBox = document.getElementById(`graph${index}`);
+                graphBox.style.display = e.target.checked ? 'block' : 'none';
+            });
+        });
+
+        // 초기 업데이트
+        updateSimulation();
+    </script>
+</body>
+</html>
