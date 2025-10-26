@@ -92,14 +92,36 @@
             width: 80px;
         }
 
+        select {
+            padding: 8px 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 15px;
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
         input[type="range"] {
-            width: 400px;
+            width: 800px;
             height: 8px;
             -webkit-appearance: none;
             appearance: none;
             background: #dee2e6;
             border-radius: 5px;
             outline: none;
+        }
+
+        @media (max-width: 1200px) {
+            input[type="range"] {
+                width: 600px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            input[type="range"] {
+                width: 400px;
+            }
         }
 
         input[type="range"]::-webkit-slider-thumb {
@@ -147,6 +169,14 @@
         .btn-reset {
             background: #dc3545;
             color: white;
+        }
+
+        .btn-capture {
+            background: #28a745;
+            color: white;
+            padding: 8px 20px;
+            font-size: 14px;
+            margin-left: 10px;
         }
 
         button:hover {
@@ -269,6 +299,10 @@
             font-size: 13px;
             margin-bottom: 6px;
             color: #2c3e50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
         }
 
         .voltage-table {
@@ -309,6 +343,35 @@
         .voltage-table td.voltage-cell {
             background-color: white;
             color: #212529;
+        }
+
+        .captured-row {
+            background-color: #f8f9fa !important;
+        }
+
+        .captured-row td {
+            background-color: #f8f9fa !important;
+            color: #495057 !important;
+        }
+
+        .live-row td.voltage-cell {
+            font-weight: bold;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+            transform: none;
+            box-shadow: none;
         }
 
         .neuron-container {
@@ -426,6 +489,16 @@
         <div class="control-panel">
             <div class="control-row">
                 <div class="control-group">
+                    <label>🎯 자극 지점:</label>
+                    <select id="stimulationPoint">
+                        <option value="0">d₁ (0cm)</option>
+                        <option value="1">d₂ (2cm)</option>
+                        <option value="2">d₃ (4cm)</option>
+                        <option value="3">d₄ (6cm)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
                     <label>⚡ 전도 속도 (cm/ms):</label>
                     <input type="number" id="speedInput" value="2" step="0.1" min="0.1">
                 </div>
@@ -512,8 +585,14 @@
                     <text x="790" y="20" text-anchor="middle" font-size="16" font-weight="bold">d₄</text>
                 </g>
 
-                <!-- Signal spark -->
-                <g id="spark" transform="translate(250, 75)" style="display: none;">
+                <!-- Signal spark 1 (left) -->
+                <g id="spark1" transform="translate(250, 75)" style="display: none;">
+                    <circle r="20" fill="yellow" opacity="0.4" />
+                    <text font-size="24" fill="gold" dominant-baseline="middle" text-anchor="middle">⚡</text>
+                </g>
+
+                <!-- Signal spark 2 (right) -->
+                <g id="spark2" transform="translate(250, 75)" style="display: none;">
                     <circle r="20" fill="yellow" opacity="0.4" />
                     <text font-size="24" fill="gold" dominant-baseline="middle" text-anchor="middle">⚡</text>
                 </g>
@@ -522,7 +601,10 @@
 
         <!-- 막전위 표 -->
         <div class="voltage-table-container">
-            <h4>📈 각 지점의 막전위 (mV)</h4>
+            <h4>
+                📈 각 지점의 막전위 (mV)
+                <button class="btn-capture" onclick="captureData()">📸 캡처</button>
+            </h4>
             <table class="voltage-table">
                 <thead>
                     <tr>
@@ -531,15 +613,17 @@
                         <th>d₂ <span>(2cm)</span></th>
                         <th>d₃ <span>(4cm)</span></th>
                         <th>d₄ <span>(6cm)</span></th>
+                        <th>삭제</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr>
+                <tbody id="tableBody">
+                    <tr class="live-row">
                         <td class="time-cell" id="tableTime">0.0 ms</td>
                         <td class="voltage-cell" id="tableVoltage0">-70.0</td>
                         <td class="voltage-cell" id="tableVoltage1">-70.0</td>
                         <td class="voltage-cell" id="tableVoltage2">-70.0</td>
                         <td class="voltage-cell" id="tableVoltage3">-70.0</td>
+                        <td>-</td>
                     </tr>
                 </tbody>
             </table>
@@ -604,7 +688,14 @@
 
                 <div class="help-section">
                     <h3>🎮 기본 사용법</h3>
-                    <p><strong>1. 전도 속도 설정</strong></p>
+                    <p><strong>1. 자극 지점 선택 (신규 기능!)</strong></p>
+                    <ul>
+                        <li><strong>🎯 자극 지점</strong>: d₁(0cm), d₂(2cm), d₃(4cm), d₄(6cm) 중 자극을 줄 위치를 선택합니다</li>
+                        <li>d₁이나 d₄를 선택하면 한 방향으로만 신호가 전파됩니다</li>
+                        <li>d₂나 d₃를 선택하면 양방향으로 대칭적으로 신호가 전파됩니다</li>
+                    </ul>
+
+                    <p><strong>2. 전도 속도 설정</strong></p>
                     <ul>
                         <li><strong>⚡ 전도 속도 (cm/ms)</strong>: 활동전위가 축삭을 따라 전파되는 속도를 설정합니다</li>
                         <li>기본값은 2 cm/ms이며, 0.1 단위로 조절할 수 있습니다</li>
@@ -612,7 +703,7 @@
                         <li>속도를 변경하면 자동으로 모든 데이터가 업데이트됩니다</li>
                     </ul>
 
-                    <p><strong>2. 시간 조절 슬라이더</strong></p>
+                    <p><strong>3. 시간 조절 슬라이더</strong></p>
                     <ul>
                         <li><strong>⏱️ 시간 조절</strong>: 슬라이더를 좌우로 움직여 시뮬레이션 시간을 조절합니다</li>
                         <li>0 ms부터 8 ms까지 0.1 ms 단위로 조절 가능합니다</li>
@@ -620,7 +711,16 @@
                         <li>슬라이더를 0으로 돌리면 처음 상태로 돌아갑니다</li>
                     </ul>
 
-                    <p><strong>3. 막전위 표 확인</strong></p>
+                    <p><strong>4. 데이터 캡처 기능 (신규 기능!)</strong></p>
+                    <ul>
+                        <li><strong>📸 캡처 버튼</strong>: 현재 시간의 막전위 데이터를 표에 고정합니다</li>
+                        <li>캡처된 행은 회색 배경으로 표시되며, 시간이 변해도 값이 고정됩니다</li>
+                        <li>가장 아래 행은 항상 실시간 데이터를 표시합니다</li>
+                        <li>여러 시간대의 데이터를 캡처하여 비교할 수 있습니다</li>
+                        <li>❌ 버튼을 눌러 캡처된 데이터를 삭제할 수 있습니다</li>
+                    </ul>
+
+                    <p><strong>5. 막전위 표 확인</strong></p>
                     <ul>
                         <li><strong>📈 각 지점의 막전위 표</strong>: 신경세포 그림 아래에 실시간 막전위 값을 표로 표시합니다</li>
                         <li>현재 시간과 네 지점(d₁~d₄)의 막전위를 한눈에 확인할 수 있습니다</li>
@@ -634,16 +734,11 @@
                         </li>
                     </ul>
 
-                    <p><strong>4. 그래프 표시 선택</strong></p>
+                    <p><strong>6. 그래프 표시 선택</strong></p>
                     <ul>
                         <li><strong>📊 그래프 표시</strong>: 체크박스를 통해 원하는 지점의 그래프만 선택적으로 볼 수 있습니다</li>
                         <li>0cm, 2cm, 4cm, 6cm 네 지점의 그래프를 자유롭게 켜고 끌 수 있습니다</li>
                         <li>그래프는 2x2 격자 형태로 배치되어 한눈에 비교하기 좋습니다</li>
-                    </ul>
-
-                    <p><strong>5. 제어 버튼</strong></p>
-                    <ul>
-                        <li><strong>📖 사용법</strong>: 이 도움말을 엽니다</li>
                     </ul>
                 </div>
 
@@ -679,20 +774,21 @@
                 <div class="help-section">
                     <h3>💡 학습 팁</h3>
                     <ul>
+                        <li><strong>양방향 전파 관찰</strong>: d₂나 d₃에서 자극을 주고 양쪽으로 동시에 전파되는 것을 관찰하세요</li>
                         <li><strong>전도 속도 변화 관찰</strong>: 전도 속도를 다르게 설정하고 신호 도달 시간 차이를 비교해보세요</li>
                         <li><strong>지점별 비교</strong>: 여러 지점의 그래프를 동시에 보면서 신호가 순차적으로 전달되는 것을 확인하세요</li>
+                        <li><strong>데이터 캡처 활용</strong>: 1ms, 2ms, 3ms 등 주요 시점의 데이터를 캡처하여 표로 정리해보세요</li>
                         <li><strong>막전위 변화 단계</strong>: 슬라이더를 천천히 움직이며 휴지전위 → 탈분극 → 재분극 → 과분극 단계를 관찰하세요</li>
-                        <li><strong>도달 시간 계산</strong>: 각 지점까지의 거리를 전도 속도로 나누면 신호 도달 시간을 예측할 수 있습니다</li>
                     </ul>
                 </div>
 
                 <div class="help-section">
                     <h3>🔬 과학적 배경</h3>
                     <p><strong>활동전위란?</strong></p>
-                    <p>신경세포에서 전기 신호가 발생하는 현象입니다. 자극이 역치를 넘으면 Na⁺(나트륨) 통로가 열리며 막전위가 급격히 상승하고, 이어서 K⁺(칼륨) 통로가 열리며 막전위가 다시 하강합니다.</p>
+                    <p>신경세포에서 전기 신호가 발생하는 현상입니다. 자극이 역치를 넘으면 Na⁺(나트륨) 통로가 열리며 막전위가 급격히 상승하고, 이어서 K⁺(칼륨) 통로가 열리며 막전위가 다시 하강합니다.</p>
                     
                     <p><strong>전도 과정:</strong></p>
-                    <p>활동전위는 축삭을 따라 한 방향으로 전파됩니다. 이는 앞선 부위의 활동전위가 인접 부위를 탈분극시키면서 연쇄적으로 일어나는 과정입니다. 유수 신경섬유에서는 도약전도가 일어나 더 빠른 전도가 가능합니다.</p>
+                    <p>활동전위는 축삭을 따라 전파됩니다. 실제 신경세포에서는 세포체에서 시작되어 한 방향으로만 전파되지만, 실험적으로 축삭의 중간 지점을 자극하면 양방향으로 전파될 수 있습니다. 유수 신경섬유에서는 도약전도가 일어나 더 빠른 전도가 가능합니다.</p>
                 </div>
 
                 <div class="help-section">
@@ -700,11 +796,11 @@
                     <p><strong>Q: 왜 일정 시간이 지나면 신호가 사라지나요?</strong></p>
                     <p>A: 실제 신경세포에서도 활동전위는 약 1-2ms의 짧은 시간 동안만 지속됩니다. 이후 불응기를 거쳐 다시 휴지전위로 돌아갑니다.</p>
                     
+                    <p><strong>Q: 양방향 전파는 실제로도 일어나나요?</strong></p>
+                    <p>A: 정상적인 상황에서는 세포체에서 축삭 말단으로만 전파되지만, 실험적으로 축삭 중간을 자극하면 양방향 전파가 일어날 수 있습니다.</p>
+                    
                     <p><strong>Q: 그래프에서 '도달 전'은 무슨 의미인가요?</strong></p>
                     <p>A: 활동전위가 아직 해당 지점에 도달하지 않았다는 뜻입니다. 전도 속도에 따라 각 지점마다 신호 도달 시간이 다릅니다.</p>
-                    
-                    <p><strong>Q: 과분극은 왜 일어나나요?</strong></p>
-                    <p>A: K⁺ 통로가 닫히는 속도가 느려서 일시적으로 휴지전위보다 낮아집니다. 이는 신경세포가 연속적인 자극에 대비하는 안전장치 역할을 합니다.</p>
                 </div>
             </div>
         </div>
@@ -719,6 +815,20 @@
             </div>
             <div class="modal-body">
                 <div class="help-section">
+                    <div class="log-date" style="color: #3d4e9f; font-weight: bold; font-size: 1.1em; margin-bottom: 10px;">2025. 10. 27. (월)</div>
+                    <div class="log-text">
+                        <strong>신경세포 막전위 시뮬레이터 v2.0 업데이트</strong><br>
+                        - 🎯 자극 지점 선택 기능 추가 (d₁~d₄)<br>
+                        - ⚡ 양방향 전파 시뮬레이션 구현<br>
+                        - 📏 시간 슬라이더 길이 확장 (더 정밀한 조절)<br>
+                        - 📸 데이터 캡처 기능 추가 (표에 누적 저장)<br>
+                        - ❌ 캡처된 데이터 삭제 기능<br><br>
+                        
+                        학생들이 다양한 자극 조건에서 활동전위 전파를 관찰하고, 주요 시점의 데이터를 캡처하여 비교 분석할 수 있게 되었습니다.
+                    </div>
+                </div>
+
+                <div class="help-section">
                     <div class="log-date" style="color: #3d4e9f; font-weight: bold; font-size: 1.1em; margin-bottom: 10px;">2025. 10. 26. (일)</div>
                     <div class="log-text">
                         <strong>신경세포 막전위 시뮬레이터 v1.0 출시</strong><br>
@@ -730,7 +840,7 @@
                 <div class="help-section">
                     <div class="log-date" style="color: #3d4e9f; font-weight: bold; font-size: 1.1em; margin-bottom: 10px;">©️ 저작권 정보</div>
                     <div class="log-text">
-                        <strong>신경세포 막전위 시뮬레이터 v1.0</strong><br><br>
+                        <strong>신경세포 막전위 시뮬레이터 v2.0</strong><br><br>
                         ⓒ 2025 충남삼성고등학교 신도경 교사<br>
                         이메일: <a href="mailto:pantarei01@cnsa.hs.kr">pantarei01@cnsa.hs.kr</a><br><br>
                         
@@ -743,7 +853,7 @@
     </div>
 
     <script>
-        // 막전위 데이터 생성 함수
+        // 막전위 데이터 생성 함수 (원본 그대로)
         function createMembraneData(delay) {
             const data = [];
             for (let t = 0; t <= 8; t += 0.1) {
@@ -751,16 +861,14 @@
                 const localT = t - delay;
                 if (localT >= 0 && localT < 1.0) {
                     v = -70 + (localT / 1.0) * 20; // -70 → -50
-                } else if (localT >= 1.0 && localT < 1.5) {
-                    v = -50 + ((localT - 1.0) / 0.5) * 50; // -50 → 0
-                } else if (localT >= 1.5 && localT < 2.0) {
-                    v = 0 + ((localT - 1.5) / 0.5) * 30; // 0 → +30
-                } else if (localT >= 2.0 && localT < 2.5) {
-                    v = 30 - ((localT - 2.0) / 0.5) * 30; // +30 → 0
-                } else if (localT >= 2.5 && localT < 3.0) {
-                    v = 0 - ((localT - 2.5) / 0.5) * 80; // 0 → -80
-                } else if (localT >= 3.0 && localT <= 4.0) {
+                } else if (localT >= 1.0 && localT < 2.0) {
+                    v = -50 + ((localT - 1.0) / 1.0) * 80; // -50 → +30
+                } else if (localT >= 2.0 && localT < 3.0) {
+                    v = 30 - ((localT - 2.0) / 1.0) * 110; // +30 → -80
+                } else if (localT >= 3.0 && localT < 4.0) {
                     v = -80 + ((localT - 3.0) / 1.0) * 10; // -80 → -70
+                } else if (localT >= 4.0) {
+                    v = -70; // 휴지전위 유지
                 }
                 data.push({ time: parseFloat(t.toFixed(1)), voltage: parseFloat(v.toFixed(1)) });
             }
@@ -769,14 +877,18 @@
 
         // 전역 변수
         const distances = [0, 2, 4, 6];
+        const chartColors = ['#0066cc', '#fd7e14', '#28a745', '#dc3545'];
         const charts = [];
         let currentTime = 0;
         let speed = 2;
+        let stimulationPoint = 0; // 자극 지점 (0: d1, 1: d2, 2: d3, 3: d4)
+        let capturedData = []; // 캡처된 데이터 배열
 
         // 차트 초기화
         distances.forEach((distance, index) => {
             const ctx = document.getElementById(`chart${index}`).getContext('2d');
-            const data = createMembraneData(distance / speed);
+            const delay = Math.abs(distances[stimulationPoint] - distance) / speed;
+            const data = createMembraneData(delay);
             
             const chart = new Chart(ctx, {
                 type: 'line',
@@ -785,8 +897,8 @@
                     datasets: [{
                         label: '막전위 (mV)',
                         data: data.map(d => d.voltage),
-                        borderColor: '#0066cc',
-                        backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                        borderColor: chartColors[index],
+                        backgroundColor: `${chartColors[index]}20`,
                         borderWidth: 3,
                         pointRadius: 0,
                         tension: 0.4
@@ -849,47 +961,98 @@
                 return '#6c757d'; // 회색 (휴지전위)
             }
             
-            // 탈분극 (0~2초): 빨강
+            // 탈분극 (0~2ms): 빨강
             if (localTime >= 0 && localTime < 2.0) {
                 return '#dc3545'; // 빨강
             }
             
-            // 재분극 (2~3초): 초록
+            // 재분극 (2~3ms): 초록
             if (localTime >= 2.0 && localTime < 3.0) {
                 return '#28a745'; // 초록
             }
             
-            // 과분극 (3~4초): 파랑
+            // 과분극 (3~4ms): 파랑
             if (localTime >= 3.0 && localTime < 4.0) {
                 return '#0066cc'; // 파랑
             }
             
-            // 다시 휴지전위로 복귀 (4초 이후): 회색
+            // 다시 휴지전위로 복귀 (4ms 이후): 회색
             return '#6c757d'; // 회색
+        }
+
+        // 번개 위치 업데이트 함수
+        function updateSparkPosition() {
+            const spark1 = document.getElementById('spark1');
+            const spark2 = document.getElementById('spark2');
+            
+            const markerPositions = [250, 430, 610, 790]; // d1~d4의 x 좌표
+            const stimPos = markerPositions[stimulationPoint];
+            const stimDist = distances[stimulationPoint];
+            
+            const traveled = currentTime * speed; // 현재까지 이동한 거리 (cm)
+            
+            // 자극 지점에 따른 번개 표시
+            if (stimulationPoint === 0) {
+                // d1: 오른쪽으로만 전파
+                const rightDist = 6; // d1에서 d4까지 거리
+                if (traveled <= rightDist) {
+                    const xPos = stimPos + (traveled / 6) * (markerPositions[3] - markerPositions[0]);
+                    spark1.setAttribute('transform', `translate(${xPos}, 75)`);
+                    spark1.style.display = 'block';
+                } else {
+                    spark1.style.display = 'none';
+                }
+                spark2.style.display = 'none';
+                
+            } else if (stimulationPoint === 3) {
+                // d4: 왼쪽으로만 전파
+                const leftDist = 6; // d4에서 d1까지 거리
+                if (traveled <= leftDist) {
+                    const xPos = stimPos - (traveled / 6) * (markerPositions[3] - markerPositions[0]);
+                    spark1.setAttribute('transform', `translate(${xPos}, 75)`);
+                    spark1.style.display = 'block';
+                } else {
+                    spark1.style.display = 'none';
+                }
+                spark2.style.display = 'none';
+                
+            } else {
+                // d2, d3: 양방향 전파
+                const leftDist = stimDist; // 왼쪽 끝까지 거리
+                const rightDist = 6 - stimDist; // 오른쪽 끝까지 거리
+                
+                // 왼쪽 번개
+                if (traveled <= leftDist) {
+                    const xPos = stimPos - (traveled / 6) * (markerPositions[3] - markerPositions[0]);
+                    spark1.setAttribute('transform', `translate(${xPos}, 75)`);
+                    spark1.style.display = 'block';
+                } else {
+                    spark1.style.display = 'none';
+                }
+                
+                // 오른쪽 번개
+                if (traveled <= rightDist) {
+                    const xPos = stimPos + (traveled / 6) * (markerPositions[3] - markerPositions[0]);
+                    spark2.setAttribute('transform', `translate(${xPos}, 75)`);
+                    spark2.style.display = 'block';
+                } else {
+                    spark2.style.display = 'none';
+                }
+            }
         }
 
         // 업데이트 함수
         function updateSimulation() {
-            const totalLength = 6; // cm
-            const excitable = Math.min(currentTime * speed, totalLength);
-            
             // 시간 표시 업데이트
             document.getElementById('timeDisplay').textContent = `${currentTime.toFixed(1)} ms`;
             document.getElementById('tableTime').textContent = `${currentTime.toFixed(1)} ms`;
             
             // 번개 위치 업데이트
-            const spark = document.getElementById('spark');
-            if (currentTime * speed <= totalLength) {
-                const xPos = 250 + (excitable / totalLength) * 540;
-                spark.setAttribute('transform', `translate(${xPos}, 75)`);
-                spark.style.display = 'block';
-            } else {
-                spark.style.display = 'none';
-            }
+            updateSparkPosition();
 
             // 각 지점 업데이트
             distances.forEach((distance, index) => {
-                const delay = distance / speed;
+                const delay = Math.abs(distances[stimulationPoint] - distance) / speed;
                 const data = createMembraneData(delay);
                 const current = data.find((d, i, arr) => currentTime <= d.time || i === arr.length - 1) || { time: currentTime, voltage: -70 };
                 
@@ -901,11 +1064,12 @@
                 voltageElem.textContent = `${current.voltage} mV`;
                 voltageElem.style.color = voltageColor;
                 
-                // 표의 전압 업데이트
+                // 표의 전압 업데이트 (실시간 행만)
                 const tableVoltageElem = document.getElementById(`tableVoltage${index}`);
-                tableVoltageElem.textContent = current.voltage.toFixed(1);
-                tableVoltageElem.style.color = voltageColor;
-                tableVoltageElem.style.fontWeight = 'bold';
+                if (tableVoltageElem) {
+                    tableVoltageElem.textContent = current.voltage.toFixed(1);
+                    tableVoltageElem.style.color = voltageColor;
+                }
                 
                 // 시간 표시 업데이트
                 const timeElem = document.getElementById(`time${index}`);
@@ -924,22 +1088,86 @@
             });
         }
 
-        // 초기화
+        // 초기화 함수
         function reset() {
             currentTime = 0;
             speed = parseFloat(document.getElementById('speedInput').value);
+            stimulationPoint = parseInt(document.getElementById('stimulationPoint').value);
             document.getElementById('timeSlider').value = 0;
+            capturedData = [];
             
             // 차트 데이터 업데이트
             distances.forEach((distance, index) => {
-                const data = createMembraneData(distance / speed);
+                const delay = Math.abs(distances[stimulationPoint] - distance) / speed;
+                const data = createMembraneData(delay);
                 charts[index].data.labels = data.map(d => d.time);
                 charts[index].data.datasets[0].data = data.map(d => d.voltage);
                 charts[index].data.datasets[0].pointRadius = 0;
                 charts[index].update();
             });
             
+            renderTable();
             updateSimulation();
+        }
+
+        // 캡처 함수
+        function captureData() {
+            const captured = {
+                time: currentTime.toFixed(1),
+                voltages: []
+            };
+            
+            distances.forEach((distance, index) => {
+                const delay = Math.abs(distances[stimulationPoint] - distance) / speed;
+                const data = createMembraneData(delay);
+                const current = data.find((d, i, arr) => currentTime <= d.time || i === arr.length - 1) || { time: currentTime, voltage: -70 };
+                captured.voltages.push(current.voltage.toFixed(1));
+            });
+            
+            capturedData.push(captured);
+            renderTable();
+        }
+
+        // 테이블 렌더링 함수
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            // 캡처된 데이터 행들
+            capturedData.forEach((capture, idx) => {
+                const row = document.createElement('tr');
+                row.className = 'captured-row';
+                row.innerHTML = `
+                    <td class="time-cell">${capture.time} ms</td>
+                    <td class="voltage-cell">${capture.voltages[0]}</td>
+                    <td class="voltage-cell">${capture.voltages[1]}</td>
+                    <td class="voltage-cell">${capture.voltages[2]}</td>
+                    <td class="voltage-cell">${capture.voltages[3]}</td>
+                    <td><button class="delete-btn" onclick="deleteCapture(${idx})">❌</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // 실시간 데이터 행
+            const liveRow = document.createElement('tr');
+            liveRow.className = 'live-row';
+            liveRow.innerHTML = `
+                <td class="time-cell" id="tableTime">${currentTime.toFixed(1)} ms</td>
+                <td class="voltage-cell" id="tableVoltage0">-70.0</td>
+                <td class="voltage-cell" id="tableVoltage1">-70.0</td>
+                <td class="voltage-cell" id="tableVoltage2">-70.0</td>
+                <td class="voltage-cell" id="tableVoltage3">-70.0</td>
+                <td>-</td>
+            `;
+            tbody.appendChild(liveRow);
+            
+            updateSimulation();
+        }
+
+        // 캡처 삭제 함수
+        function deleteCapture(index) {
+            capturedData.splice(index, 1);
+            renderTable();
         }
 
         // 모달 함수
@@ -975,6 +1203,7 @@
         document.getElementById('helpBtn').addEventListener('click', showHelp);
         document.getElementById('devLogBtn').addEventListener('click', showDevLog);
         document.getElementById('speedInput').addEventListener('change', reset);
+        document.getElementById('stimulationPoint').addEventListener('change', reset);
         
         // 시간 슬라이더
         document.getElementById('timeSlider').addEventListener('input', (e) => {
