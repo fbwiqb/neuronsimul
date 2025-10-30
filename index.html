@@ -1114,14 +1114,18 @@
         function captureData() {
             const captured = {
                 time: currentTime.toFixed(1),
-                voltages: []
+                voltages: [],
+                colors: []  // 색상 정보 추가
             };
             
             distances.forEach((distance, index) => {
                 const delay = Math.abs(distances[stimulationPoint] - distance) / speed;
                 const data = createMembraneData(delay);
                 const current = data.find((d, i, arr) => currentTime <= d.time || i === arr.length - 1) || { time: currentTime, voltage: -70 };
+                const color = getVoltageColor(current.voltage, delay, currentTime);  // 색상 계산
+                
                 captured.voltages.push(current.voltage.toFixed(1));
+                captured.colors.push(color);  // 색상 저장
             });
             
             capturedData.push(captured);
@@ -1134,19 +1138,19 @@
             tbody.innerHTML = '';
             
             // 캡처된 데이터 행들
-            capturedData.forEach((capture, idx) => {
-                const row = document.createElement('tr');
-                row.className = 'captured-row';
-                row.innerHTML = `
-                    <td class="time-cell">${capture.time} ms</td>
-                    <td class="voltage-cell">${capture.voltages[0]}</td>
-                    <td class="voltage-cell">${capture.voltages[1]}</td>
-                    <td class="voltage-cell">${capture.voltages[2]}</td>
-                    <td class="voltage-cell">${capture.voltages[3]}</td>
-                    <td><button class="delete-btn" onclick="deleteCapture(${idx})">❌</button></td>
-                `;
-                tbody.appendChild(row);
-            });
+                capturedData.forEach((capture, idx) => {
+                    const row = document.createElement('tr');
+                    row.className = 'captured-row';
+                    row.innerHTML = `
+                        <td class="time-cell">${capture.time} ms</td>
+                        <td class="voltage-cell" style="color: ${capture.colors[0]}">${capture.voltages[0]}</td>
+                        <td class="voltage-cell" style="color: ${capture.colors[1]}">${capture.voltages[1]}</td>
+                        <td class="voltage-cell" style="color: ${capture.colors[2]}">${capture.voltages[2]}</td>
+                        <td class="voltage-cell" style="color: ${capture.colors[3]}">${capture.voltages[3]}</td>
+                        <td><button class="delete-btn" onclick="deleteCapture(${idx})">❌</button></td>
+                    `;
+                    tbody.appendChild(row);
+                });
             
             // 실시간 데이터 행
             const liveRow = document.createElement('tr');
