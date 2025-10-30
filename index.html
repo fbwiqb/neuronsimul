@@ -351,7 +351,6 @@
 
         .captured-row td {
             background-color: #f8f9fa !important;
-            color: #495057 !important;
         }
 
         .live-row td.voltage-cell {
@@ -1143,10 +1142,10 @@
                     row.className = 'captured-row';
                     row.innerHTML = `
                         <td class="time-cell">${capture.time} ms</td>
-                        <td class="voltage-cell" style="color: ${capture.colors[0]}">${capture.voltages[0]}</td>
-                        <td class="voltage-cell" style="color: ${capture.colors[1]}">${capture.voltages[1]}</td>
-                        <td class="voltage-cell" style="color: ${capture.colors[2]}">${capture.voltages[2]}</td>
-                        <td class="voltage-cell" style="color: ${capture.colors[3]}">${capture.voltages[3]}</td>
+                        <td class="voltage-cell" style="color: ${capture.colors[0]}; font-weight: bold;">${capture.voltages[0]}</td>
+                        <td class="voltage-cell" style="color: ${capture.colors[1]}; font-weight: bold;">${capture.voltages[1]}</td>
+                        <td class="voltage-cell" style="color: ${capture.colors[2]}; font-weight: bold;">${capture.voltages[2]}</td>
+                        <td class="voltage-cell" style="color: ${capture.colors[3]}; font-weight: bold;">${capture.voltages[3]}</td>
                         <td><button class="delete-btn" onclick="deleteCapture(${idx})">❌</button></td>
                     `;
                     tbody.appendChild(row);
